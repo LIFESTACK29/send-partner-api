@@ -4,7 +4,7 @@ services:
     name: send-partner-api-dashboard
     runtime: node
     plan: free
-    branch: main
+    branch: master
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
     healthCheckPath: /health
@@ -16,7 +16,7 @@ services:
     name: send-partner-api-live
     runtime: node
     plan: free
-    branch: main
+    branch: master
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
     healthCheckPath: /health
@@ -30,7 +30,7 @@ services:
     name: send-partner-api-sandbox
     runtime: node
     plan: free
-    branch: main
+    branch: master
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
     healthCheckPath: /health
