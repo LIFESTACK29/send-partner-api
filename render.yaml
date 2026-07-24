@@ -3,7 +3,7 @@ services:
   - type: web
     name: send-partner-api-dashboard
     runtime: node
-    plan: starter
+    plan: free
     branch: main
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
@@ -15,7 +15,7 @@ services:
   - type: web
     name: send-partner-api-live
     runtime: node
-    plan: starter
+    plan: free
     branch: main
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
@@ -29,7 +29,7 @@ services:
   - type: web
     name: send-partner-api-sandbox
     runtime: node
-    plan: starter
+    plan: free
     branch: main
     buildCommand: npm install --include=dev && npm run build
     startCommand: node dist/index.js
