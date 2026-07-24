@@ -8,6 +8,7 @@ function validateEnv(): void {
     const missing: string[] = [];
     const required = [
         "MONGO_URI",
+        "JWT_SECRET",
         "SEND_API_BASE_URL",
         "SEND_API_PARTNER_SECRET",
         "API_ENCRYPTION_KEY",

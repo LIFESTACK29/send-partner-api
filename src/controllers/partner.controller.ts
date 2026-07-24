@@ -1,4 +1,5 @@
 import { Request, Response, RequestHandler } from "express";
+import mongoose from "mongoose";
 import Partner from "../models/Partner";
 import { getSendApiService } from "../services/sendApiService";
 import { CatchAsync } from "../utils/catchasync.util";
@@ -78,33 +79,21 @@ export const registerPartner: RequestHandler = CatchAsync(
         // encrypted for later display/reveal in the dashboard).
         const { fields: keyFields } = await buildKeySet();
 
-        // 1. Create the partner in the Partner DB first (source of truth for identity).
-        const partner = await Partner.create({
-            businessName,
-            firstName,
-            lastName,
-            email,
-            phoneNumber,
-            password,
-            referralCode,
-            mainApiPartnerId: "", // filled in after linking below
-            ...keyFields,
-        });
-        logger.info("registerPartner: partner created in Partner DB", {
-            partnerId: partner._id.toString(),
-            email,
-        });
+        // Pre-generate the partner id so we can link on the platform BEFORE
+        // persisting anything locally. This guarantees a failed platform link
+        // never leaves an orphaned partner in the Partner DB (which would then
+        // block re-registration with the same email).
+        const partnerId = new mongoose.Types.ObjectId();
 
-        // 2. Create the linked Partner + wallet on the platform (replaces the
-        //    old shadow-user + createWallet). Store the returned platform id.
+        // 1. Create the linked Partner + wallet on the platform first.
         logger.info("registerPartner: calling send-api createLinkedPartner", {
             baseURL: process.env.SEND_API_BASE_URL,
-            partnerRef: partner._id.toString(),
+            partnerRef: partnerId.toString(),
         });
         let linkResponse;
         try {
             linkResponse = await sendApiService.createLinkedPartner({
-                partnerRef: partner._id.toString(),
+                partnerRef: partnerId.toString(),
                 businessName,
                 firstName,
                 lastName,
@@ -112,11 +101,10 @@ export const registerPartner: RequestHandler = CatchAsync(
                 phoneNumber,
             });
         } catch (linkErr: any) {
-            // Roll back the local partner so a retry with the same email is possible,
-            // and surface exactly why the platform link failed.
-            await Partner.deleteOne({ _id: partner._id });
+            // Nothing has been persisted locally yet, so there is nothing to roll
+            // back — the caller can safely retry with the same email.
             logger.error("registerPartner: createLinkedPartner FAILED", {
-                partnerRef: partner._id.toString(),
+                partnerRef: partnerId.toString(),
                 sendApiBaseUrl: process.env.SEND_API_BASE_URL,
                 code: linkErr?.code,
                 upstreamStatus: linkErr?.response?.status,
@@ -126,9 +114,21 @@ export const registerPartner: RequestHandler = CatchAsync(
             throw linkErr;
         }
 
-        partner.mainApiPartnerId = linkResponse.data.partnerId;
-        await partner.save();
-        logger.info("registerPartner: linked on platform", {
+        // 2. Platform link succeeded — now persist the partner locally, with the
+        //    same pre-generated id used as partnerRef and the returned platform id.
+        const partner = await Partner.create({
+            _id: partnerId,
+            businessName,
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            password,
+            referralCode,
+            mainApiPartnerId: linkResponse.data.partnerId,
+            ...keyFields,
+        });
+        logger.info("registerPartner: partner created + linked", {
             partnerId: partner._id.toString(),
             mainApiPartnerId: partner.mainApiPartnerId,
         });
