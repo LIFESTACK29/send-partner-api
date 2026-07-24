@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticatePartnerApiKey, authenticatePartnerDashboard } from "../middlewares/authenticatePartner";
+import { authenticatePartnerBoth } from "../middlewares/authenticatePartner";
 import {
     createAddress,
     getAddresses,
@@ -9,13 +9,6 @@ import {
 } from "../controllers/address.controller";
 
 const router = express.Router();
-
-const authenticatePartnerBoth = (req: any, res: any, next: any) => {
-    if (req.headers["x-partner-key"]) {
-        return authenticatePartnerApiKey(req, res, next);
-    }
-    return authenticatePartnerDashboard(req, res, next);
-};
 
 router.post("/addresses", authenticatePartnerBoth, createAddress);
 router.get("/addresses", authenticatePartnerBoth, getAddresses);

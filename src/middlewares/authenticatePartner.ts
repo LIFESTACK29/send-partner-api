@@ -56,6 +56,28 @@ export const authenticatePartnerApiKey = async (
 };
 
 /**
+ * Combined auth for routes served to BOTH the dashboard (JWT session) and
+ * developers (API key). A developer sends only `Authorization: Bearer <key>` —
+ * the key is recognised by its `pub_live_` / `pub_test_` prefix. The legacy
+ * `x-partner-key` header is still honoured for backward compatibility.
+ */
+export const authenticatePartnerBoth = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const looksLikeApiKey =
+        token.startsWith("pub_live_") || token.startsWith("pub_test_");
+
+    if (looksLikeApiKey || req.headers["x-partner-key"]) {
+        return authenticatePartnerApiKey(req, res, next);
+    }
+    return authenticatePartnerDashboard(req, res, next);
+};
+
+/**
  * Dashboard Authentication (JWT based for web portal)
  */
 export const authenticatePartnerDashboard = async (

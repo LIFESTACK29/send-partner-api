@@ -3,6 +3,7 @@ import Partner from "../models/Partner";
 import { getSendApiService } from "../services/sendApiService";
 import { CatchAsync } from "../utils/catchasync.util";
 import { encryptSecret, decryptSecret } from "../utils/crypto.util";
+import logger from "../config/logger";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -89,20 +90,48 @@ export const registerPartner: RequestHandler = CatchAsync(
             mainApiPartnerId: "", // filled in after linking below
             ...keyFields,
         });
+        logger.info("registerPartner: partner created in Partner DB", {
+            partnerId: partner._id.toString(),
+            email,
+        });
 
         // 2. Create the linked Partner + wallet on the platform (replaces the
         //    old shadow-user + createWallet). Store the returned platform id.
-        const linkResponse = await sendApiService.createLinkedPartner({
+        logger.info("registerPartner: calling send-api createLinkedPartner", {
+            baseURL: process.env.SEND_API_BASE_URL,
             partnerRef: partner._id.toString(),
-            businessName,
-            firstName,
-            lastName,
-            email,
-            phoneNumber,
         });
+        let linkResponse;
+        try {
+            linkResponse = await sendApiService.createLinkedPartner({
+                partnerRef: partner._id.toString(),
+                businessName,
+                firstName,
+                lastName,
+                email,
+                phoneNumber,
+            });
+        } catch (linkErr: any) {
+            // Roll back the local partner so a retry with the same email is possible,
+            // and surface exactly why the platform link failed.
+            await Partner.deleteOne({ _id: partner._id });
+            logger.error("registerPartner: createLinkedPartner FAILED", {
+                partnerRef: partner._id.toString(),
+                sendApiBaseUrl: process.env.SEND_API_BASE_URL,
+                code: linkErr?.code,
+                upstreamStatus: linkErr?.response?.status,
+                upstreamData: linkErr?.response?.data,
+                message: linkErr?.message,
+            });
+            throw linkErr;
+        }
 
         partner.mainApiPartnerId = linkResponse.data.partnerId;
         await partner.save();
+        logger.info("registerPartner: linked on platform", {
+            partnerId: partner._id.toString(),
+            mainApiPartnerId: partner.mainApiPartnerId,
+        });
 
         // Keys are not returned here — the partner views/reveals them from the
         // dashboard (Settings → API Keys), where the live secret is password-gated.
