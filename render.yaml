@@ -1,0 +1,59 @@
+services:
+  # ---- DASHBOARD (browser; mode via the dashboard toggle) ----
+  - type: web
+    name: send-partner-api-dashboard
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - fromGroup: send-partner-shared
+
+  - type: web
+    name: send-partner-api-live
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PARTNER_MODE
+        value: live
+      - fromGroup: send-partner-shared
+
+  - type: web
+    name: send-partner-api-sandbox
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PARTNER_MODE
+        value: test
+      - fromGroup: send-partner-shared
+
+envVarGroups:
+  - name: send-partner-shared
+    envVars:
+      - key: MONGO_URI
+        sync: false            
+      - key: JWT_SECRET
+        sync: false
+      - key: API_ENCRYPTION_KEY
+        sync: false
+      - key: SEND_API_PARTNER_SECRET
+        sync: false
+      - key: PARTNER_ADMIN_SECRET
+        sync: false
+      - key: SEND_API_BASE_URL
+        value: https://send-api-1v9v.onrender.com/api/v1
+      - key: ALLOWED_ORIGINS
+        sync: false            
