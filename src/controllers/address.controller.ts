@@ -7,6 +7,32 @@ export const createAddress: RequestHandler = CatchAsync(
         const partner = (req as any).partner;
         const { label, name, phoneNumber, email, address, city, state, country, postalCode, latitude, longitude } = req.body;
 
+        // Contact name + phone and the location fields are required. postalCode
+        // and email stay optional.
+        const missing = [
+            "label",
+            "name",
+            "phoneNumber",
+            "address",
+            "city",
+            "state",
+            "country",
+        ].filter((field) => !String(req.body?.[field] ?? "").trim());
+        if (missing.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required field(s): ${missing.join(", ")}`,
+            });
+        }
+
+        // Coordinates are required and must be numeric.
+        if (typeof latitude !== "number" || typeof longitude !== "number") {
+            return res.status(400).json({
+                success: false,
+                message: "latitude and longitude are required and must be numbers",
+            });
+        }
+
         const newAddress = await Address.create({
             partnerId: partner._id,
             label,
