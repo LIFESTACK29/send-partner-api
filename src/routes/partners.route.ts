@@ -11,7 +11,8 @@ import {
     deleteWebhook,
     getApiKeys,
     revealLiveSecret,
-    regenerateApiKeys
+    regenerateApiKeys,
+    provisionWalletAccount
 } from "../controllers/partner.controller";
 import { getDashboardStats } from "../controllers/stats.controller";
 
@@ -21,6 +22,7 @@ router.post("/partners/register", registerPartner);
 router.post("/partners/login", loginPartner);
 router.get("/partners/me", authenticatePartnerDashboard, getPartner);
 router.get("/partners/transactions", authenticatePartnerDashboard, getPartnerTransactions);
+router.post("/partners/wallet/provision-account", authenticatePartnerDashboard, provisionWalletAccount);
 router.get("/partners/stats", authenticatePartnerDashboard, getDashboardStats);
 
 // Webhooks (dashboard/JWT only)

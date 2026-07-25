@@ -91,6 +91,15 @@ export const realSendApiService = {
         return response.data?.data ?? response.data;
     },
 
+    // Provision a Paystack funding account (DVA) for a linked partner's wallet.
+    // Idempotent on the platform side. Returns { success, message, data }.
+    provisionPartnerAccount: async (partnerId: string) => {
+        const response = await sendApiClient.post(
+            `/partners/${partnerId}/wallet/provision-account`,
+        );
+        return response.data;
+    },
+
     // Wallet transactions for a linked partner.
     getPartnerTransactions: async (partnerId: string) => {
         const response = await sendApiClient.get(`/partners/${partnerId}/transactions`);

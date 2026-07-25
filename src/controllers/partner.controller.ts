@@ -1,7 +1,7 @@
 import { Request, Response, RequestHandler } from "express";
 import mongoose from "mongoose";
 import Partner from "../models/Partner";
-import { getSendApiService } from "../services/sendApiService";
+import { getSendApiService, realSendApiService } from "../services/sendApiService";
 import { CatchAsync } from "../utils/catchasync.util";
 import { encryptSecret, decryptSecret } from "../utils/crypto.util";
 import logger from "../config/logger";
@@ -508,5 +508,29 @@ export const getPartnerTransactions: RequestHandler = CatchAsync(
             message: "Transactions retrieved successfully",
             data: transactions,
         });
+    }
+);
+
+// ─── Provision funding account (Paystack DVA) ────────────────────────────────
+
+/**
+ * Create the partner's dedicated funding account so they can top up their
+ * wallet. Idempotent — returns the existing account if already provisioned.
+ * Always uses the real platform (wallets are live money, never the mock).
+ */
+export const provisionWalletAccount: RequestHandler = CatchAsync(
+    async (req: Request, res: Response) => {
+        const partner = (req as any).partner;
+        if (!partner?.mainApiPartnerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Partner is not linked to the platform yet",
+            });
+        }
+
+        const result = await realSendApiService.provisionPartnerAccount(
+            partner.mainApiPartnerId,
+        );
+        res.status(200).json(result);
     }
 );
