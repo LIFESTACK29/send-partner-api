@@ -85,9 +85,12 @@ export const realSendApiService = {
         return response.data; // { success, message, data: { deliveryId, status, refunded } }
     },
 
-    // Wallet status for a linked partner.
+    // Wallet status for a linked partner. Short timeout so a cold/slow platform
+    // degrades the /me wallet gracefully instead of hanging the dashboard load.
     getWalletStatus: async (partnerId: string) => {
-        const response = await sendApiClient.get(`/partners/${partnerId}/wallet`);
+        const response = await sendApiClient.get(`/partners/${partnerId}/wallet`, {
+            timeout: 12000,
+        });
         return response.data?.data ?? response.data;
     },
 

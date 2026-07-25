@@ -203,8 +203,23 @@ export const getPartner: RequestHandler = CatchAsync(
         const partner = (req as any).partner;
         const sendApiService = getSendApiService(req.mode === "test");
 
-        // Fetch wallet status from Main API
-        const walletStatus = await sendApiService.getWalletStatus(partner.mainApiPartnerId);
+        // Fetch wallet status from the platform. This is a best-effort sub-fetch:
+        // if the platform is briefly unreachable (e.g. cold start) we must NOT fail
+        // the whole /me call — the dashboard needs partner details to load. Return
+        // wallet: null and let the client show it as unavailable.
+        let walletStatus: unknown = null;
+        try {
+            walletStatus = await sendApiService.getWalletStatus(
+                partner.mainApiPartnerId,
+            );
+        } catch (err: any) {
+            logger.warn("getPartner: wallet status fetch failed", {
+                partnerId: String(partner._id),
+                mainApiPartnerId: partner.mainApiPartnerId,
+                upstreamStatus: err?.response?.status,
+                message: err?.message,
+            });
+        }
 
         res.status(200).json({
             success: true,

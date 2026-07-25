@@ -91,14 +91,16 @@ export const mockSendApiService = {
     };
   },
 
-  // Wallet (ALL MOCKED - no real changes!)
+  // Wallet (ALL MOCKED - no real changes!). Must return the SAME (unwrapped)
+  // shape the real getWalletStatus resolves to, so the dashboard reads it identically.
   getWalletStatus: async (partnerId: string) => {
     return {
-      success: true,
-      data: {
-        balance: 100000, // Always 100k on sandbox for testing
-        currency: "NGN",
-      },
+      balance: 10000000, // kobo — always ₦100k on sandbox for testing
+      balanceInNaira: 100000,
+      currency: "NGN",
+      accountNumber: null,
+      bankName: null,
+      accountName: null,
     };
   },
 
