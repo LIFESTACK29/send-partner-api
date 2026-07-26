@@ -5,6 +5,7 @@ import addressesRoute from "./addresses.route";
 import ratesRoute from "./rates.route";
 import webhooksRoute from "./webhooks.route";
 import adminRoute from "./admin.route";
+import internalRoute from "./internal.route";
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use("/api/v1", addressesRoute);
 router.use("/api/v1", ratesRoute);
 router.use("/api/v1", webhooksRoute);
 router.use("/api/v1", adminRoute);
+router.use("/api/v1", internalRoute);
 
 export default router;
