@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import Partner from "../models/Partner";
 import { emitToPartner } from "../config/socket";
 import { CatchAsync } from "../utils/catchasync.util";
+import logger from "../config/logger";
 
 const router = express.Router();
 
@@ -27,6 +28,10 @@ router.post(
     authenticateInternal,
     CatchAsync(async (req: Request, res: Response) => {
         const { mainApiPartnerId, wallet } = req.body;
+        logger.info("[internal/wallet-updated] received", {
+            mainApiPartnerId,
+            accountNumber: (wallet as any)?.accountNumber,
+        });
         if (!mainApiPartnerId) {
             return res.status(400).json({ success: false, message: "mainApiPartnerId is required" });
         }
@@ -34,6 +39,14 @@ router.post(
         const partner = await Partner.findOne({ mainApiPartnerId }).select("_id");
         if (partner) {
             emitToPartner(partner._id.toString(), "wallet_account_ready", wallet ?? {});
+            logger.info("[internal/wallet-updated] emitted to partner room", {
+                mainApiPartnerId,
+                localPartnerId: partner._id.toString(),
+            });
+        } else {
+            logger.warn("[internal/wallet-updated] no local partner for mainApiPartnerId", {
+                mainApiPartnerId,
+            });
         }
 
         // Always 200 — this is best-effort realtime; the caller must not retry-storm.

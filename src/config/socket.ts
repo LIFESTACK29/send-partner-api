@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import jwt from "jsonwebtoken";
+import logger from "./logger";
 
 let io: SocketIOServer | null = null;
 
@@ -40,6 +41,7 @@ export const initSocket = (server: HttpServer): SocketIOServer => {
             socket.data.partnerId = decoded.partnerId;
             next();
         } catch {
+            logger.warn("[socket] connection rejected — invalid token");
             next(new Error("Auth error: invalid token"));
         }
     });
@@ -48,6 +50,10 @@ export const initSocket = (server: HttpServer): SocketIOServer => {
         const partnerId = socket.data.partnerId as string | undefined;
         if (!partnerId) return;
         socket.join(`partner-${partnerId}`);
+        logger.info("[socket] partner connected", { partnerId, socketId: socket.id });
+        socket.on("disconnect", () => {
+            logger.info("[socket] partner disconnected", { partnerId, socketId: socket.id });
+        });
     });
 
     return io;
@@ -59,7 +65,11 @@ export const emitToPartner = (
     event: string,
     data: unknown,
 ): void => {
-    if (io) io.to(`partner-${partnerId}`).emit(event, data);
+    if (!io) {
+        logger.warn("[socket] emitToPartner called but socket not initialized", { partnerId, event });
+        return;
+    }
+    io.to(`partner-${partnerId}`).emit(event, data);
 };
 
 export const getIO = (): SocketIOServer => {
