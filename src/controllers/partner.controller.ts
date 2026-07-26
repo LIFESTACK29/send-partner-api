@@ -555,9 +555,17 @@ export const provisionWalletAccount: RequestHandler = CatchAsync(
             });
         }
 
+        logger.info("[provision-account] calling platform", {
+            partnerId: String(partner._id),
+            mainApiPartnerId: partner.mainApiPartnerId,
+        });
         const result = await realSendApiService.provisionPartnerAccount(
             partner.mainApiPartnerId,
         );
+        logger.info("[provision-account] platform responded", {
+            status: (result as any)?.data?.status,
+            message: (result as any)?.message,
+        });
         res.status(200).json(result);
     }
 );
