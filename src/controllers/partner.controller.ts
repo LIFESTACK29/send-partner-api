@@ -513,10 +513,22 @@ export const getPartnerTransactions: RequestHandler = CatchAsync(
         const partner = (req as any).partner;
         const sendApiService = getSendApiService(req.mode === "test");
 
-        // The partner wallet + its transactions live on the platform.
-        const transactions = await sendApiService.getPartnerTransactions(
-            partner.mainApiPartnerId,
-        );
+        // The partner wallet + its transactions live on the platform. Best-effort:
+        // a brief platform outage (e.g. cold start) must not 500 the whole page —
+        // return an empty ledger and let the client retry.
+        let transactions: unknown = [];
+        try {
+            transactions = await sendApiService.getPartnerTransactions(
+                partner.mainApiPartnerId,
+            );
+        } catch (err: any) {
+            logger.warn("getPartnerTransactions: fetch failed", {
+                partnerId: String(partner._id),
+                mainApiPartnerId: partner.mainApiPartnerId,
+                upstreamStatus: err?.response?.status,
+                message: err?.message,
+            });
+        }
 
         res.status(200).json({
             success: true,
