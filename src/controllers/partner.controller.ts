@@ -201,7 +201,9 @@ export const loginPartner: RequestHandler = CatchAsync(
 export const getPartner: RequestHandler = CatchAsync(
     async (req: Request, res: Response) => {
         const partner = (req as any).partner;
-        const sendApiService = getSendApiService(req.mode === "test");
+        // The partner wallet is a single real-money wallet — always use the live
+        // platform regardless of the dashboard's Live/Test toggle.
+        const sendApiService = realSendApiService;
 
         // Fetch wallet status from the platform. This is a best-effort sub-fetch:
         // if the platform is briefly unreachable (e.g. cold start) we must NOT fail
@@ -212,13 +214,8 @@ export const getPartner: RequestHandler = CatchAsync(
             walletStatus = await sendApiService.getWalletStatus(
                 partner.mainApiPartnerId,
             );
-        } catch (err: any) {
-            logger.warn("getPartner: wallet status fetch failed", {
-                partnerId: String(partner._id),
-                mainApiPartnerId: partner.mainApiPartnerId,
-                upstreamStatus: err?.response?.status,
-                message: err?.message,
-            });
+        } catch {
+            // Best-effort — a platform hiccup must not fail the whole /me call.
         }
 
         res.status(200).json({
@@ -511,7 +508,8 @@ export const deleteWebhook: RequestHandler = CatchAsync(
 export const getPartnerTransactions: RequestHandler = CatchAsync(
     async (req: Request, res: Response) => {
         const partner = (req as any).partner;
-        const sendApiService = getSendApiService(req.mode === "test");
+        // Wallet transactions are real money — always use the live platform.
+        const sendApiService = realSendApiService;
 
         // The partner wallet + its transactions live on the platform. Best-effort:
         // a brief platform outage (e.g. cold start) must not 500 the whole page —
@@ -521,13 +519,8 @@ export const getPartnerTransactions: RequestHandler = CatchAsync(
             transactions = await sendApiService.getPartnerTransactions(
                 partner.mainApiPartnerId,
             );
-        } catch (err: any) {
-            logger.warn("getPartnerTransactions: fetch failed", {
-                partnerId: String(partner._id),
-                mainApiPartnerId: partner.mainApiPartnerId,
-                upstreamStatus: err?.response?.status,
-                message: err?.message,
-            });
+        } catch {
+            // Best-effort — a platform hiccup must not fail the page.
         }
 
         res.status(200).json({
@@ -555,17 +548,9 @@ export const provisionWalletAccount: RequestHandler = CatchAsync(
             });
         }
 
-        logger.info("[provision-account] calling platform", {
-            partnerId: String(partner._id),
-            mainApiPartnerId: partner.mainApiPartnerId,
-        });
         const result = await realSendApiService.provisionPartnerAccount(
             partner.mainApiPartnerId,
         );
-        logger.info("[provision-account] platform responded", {
-            status: (result as any)?.data?.status,
-            message: (result as any)?.message,
-        });
         res.status(200).json(result);
     }
 );
